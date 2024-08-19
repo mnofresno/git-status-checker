@@ -6,40 +6,44 @@ check_git_status() {
     cd "$dir" || return
     git_status=$(git status --porcelain 2>/dev/null)
     if [[ -z "$git_status" ]]; then
-        echo "Clean"
+        echo "Clean 0"
     else
+        changes=$(echo "$git_status" | wc -l)
         if echo "$git_status" | grep -q "^ M"; then
-            echo "Dirty"
+            echo "Dirty $changes"
         else
-            echo "Stagging"
+            echo "Stagging $changes"
         fi
     fi
 }
 
 # Function to print the table header
 print_header() {
-    echo "+----------------------------+----------------+"
-    echo "| Repository                 | Status         |"
-    echo "+----------------------------+----------------+"
+    echo "+----------------------------+----------------+-----------+"
+    echo "| Repository                 | Status         | Changes # |"
+    echo "+----------------------------+----------------+-----------+"
 }
 
 # Function to print a table row
 print_row() {
-    printf "| %-26s | %-14s |\n" "$1" "$2"
+    printf "| %-26s | %-14s | %-9s |\n" "$1" "$2" "$3"
 }
 
 # Function to print the table footer
 print_footer() {
-    echo "+----------------------------+----------------+"
+    echo "+----------------------------+----------------+-----------+"
 }
 
 # Main function to find git repos and their statuses
 main() {
     local target_dir="$1"
+    local clean_count=0
+    local dirty_count=0
+    local stagging_count=0
 
     if [[ -z "$target_dir" ]]; then
-        echo "Usage: $0 <directory>"
-        exit 1
+        echo "No directory specified. Using the current directory ('.') as the target."
+        target_dir="."
     fi
 
     if [[ ! -d "$target_dir" ]]; then
@@ -52,13 +56,37 @@ main() {
     print_header
     for dir in */ ; do
         if [ -d "$dir/.git" ]; then
-            status=$(check_git_status "$dir")
-            print_row "${dir%/}" "$status"
+            status_info=$(check_git_status "$dir")
+            status=$(echo "$status_info" | awk '{print $1}')
+            changes=$(echo "$status_info" | awk '{print $2}')
+
+            case $status in
+                "Clean")
+                    clean_count=$((clean_count + 1))
+                    ;;
+                "Dirty")
+                    dirty_count=$((dirty_count + 1))
+                    ;;
+                "Stagging")
+                    stagging_count=$((stagging_count + 1))
+                    ;;
+            esac
+
+            print_row "${dir%/}" "$status" "$changes"
         fi
     done
     print_footer
+
+    echo
+    echo "Summary:"
+    echo "+-----------+-------+"
+    echo "| Status    | Count |"
+    echo "+-----------+-------+"
+    printf "| Clean     | %5d |\n" "$clean_count"
+    printf "| Dirty     | %5d |\n" "$dirty_count"
+    printf "| Stagging  | %5d |\n" "$stagging_count"
+    echo "+-----------+-------+"
 }
 
 # Run the main function with the specified directory
 main "$1"
-
