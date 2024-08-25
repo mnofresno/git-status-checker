@@ -17,21 +17,30 @@ check_git_status() {
     fi
 }
 
+# Function to get the email of the last commit author
+get_last_commit_author_email() {
+    local dir="$1"
+    cd "$dir" || return
+    git log -1 --pretty=format:'%ae'
+}
+
 # Function to print the table header
 print_header() {
-    echo "+----------------------------+----------------+-----------+"
-    echo "| Repository                 | Status         | Changes # |"
-    echo "+----------------------------+----------------+-----------+"
+    local target_dir="$1"
+    echo "Current state of repos in '$target_dir':"
+    echo "+----------------------------+----------------+-----------+----------------------------+"
+    echo "| Repository                 | Status         | Changes # | Last Commit Author Email   |"
+    echo "+----------------------------+----------------+-----------+----------------------------+"
 }
 
 # Function to print a table row
 print_row() {
-    printf "| %-26s | %-14s | %-9s |\n" "$1" "$2" "$3"
+    printf "| %-26s | %-14s | %-9s | %-26s |\n" "$1" "$2" "$3" "$4"
 }
 
 # Function to print the table footer
 print_footer() {
-    echo "+----------------------------+----------------+-----------+"
+    echo "+----------------------------+----------------+-----------+----------------------------+"
 }
 
 # Main function to find git repos and their statuses
@@ -53,12 +62,13 @@ main() {
 
     cd "$target_dir" || exit
 
-    print_header
+    print_header "$target_dir"
     for dir in */ ; do
         if [ -d "$dir/.git" ]; then
             status_info=$(check_git_status "$dir")
             status=$(echo "$status_info" | awk '{print $1}')
             changes=$(echo "$status_info" | awk '{print $2}')
+            author_email=$(get_last_commit_author_email "$dir")
 
             case $status in
                 "Clean")
@@ -72,7 +82,7 @@ main() {
                     ;;
             esac
 
-            print_row "${dir%/}" "$status" "$changes"
+            print_row "${dir%/}" "$status" "$changes" "$author_email"
         fi
     done
     print_footer
