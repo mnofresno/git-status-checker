@@ -1,31 +1,63 @@
 #!/usr/bin/env bash
 
+SCRIPT_NAME="ngxensite"
+INSTALL_PATH="/usr/bin/$SCRIPT_NAME"
+
 if [ $EUID -ne 0 ]; then
-    echo "You must be root: \"sudo ngxensite\""
+    echo "You must be root: \"sudo $SCRIPT_NAME\""
     exit 1
 fi
 
-# Función para autocompletado
+# Function to install the script to /usr/bin
+install_script() {
+    if [ ! -f "$INSTALL_PATH" ]; then
+        echo "Installing $SCRIPT_NAME to $INSTALL_PATH..."
+        curl -s https://raw.githubusercontent.com/mnofresno/git-status-checker/master/bin/ngx/ngxensite -o $INSTALL_PATH
+        chmod +x $INSTALL_PATH
+        echo "Installation complete."
+    else
+        echo "$SCRIPT_NAME is already installed in $INSTALL_PATH."
+    fi
+}
+
+# Function to generate the autocompletion script for ngxensite
 generate_autocomplete() {
-    cat <<EOF >/etc/bash_completion.d/ngxensite
+    cat <<EOF >/etc/bash_completion.d/$SCRIPT_NAME
 _ngen_autocomplete() {
     local cur=\${COMP_WORDS[COMP_CWORD]}
     COMPREPLY=(\$(compgen -W "\$(ls /etc/nginx/sites-available)" -- \${cur}))
     return 0
 }
-complete -F _ngen_autocomplete ngxensite
+complete -F _ngen_autocomplete $SCRIPT_NAME
 EOF
-    echo "Autocomplete script for ngxensite has been generated and installed."
-    source /etc/bash_completion.d/ngxensite
-    exit 0
+    echo "Autocomplete script for $SCRIPT_NAME has been generated and installed."
+    source /etc/bash_completion.d/$SCRIPT_NAME
 }
 
-# Verificar si se pasa la opción --autocomplete
-if [ "$1" == "--autocomplete" ]; then
-    generate_autocomplete
-fi
+# Detect if the script is being run via curl or directly from the shell
+detect_run_mode() {
+    if [ -t 0 ]; then
+        # Script is being run directly (not via a pipe)
+        echo "Running manually..."
+        if [ "$1" == "--install" ]; then
+            install_script
+            generate_autocomplete
+            echo "Installation and autocompletion setup complete. You can now use $SCRIPT_NAME with autocompletion."
+            exit 0
+        fi
+    else
+        # Script is being piped (via curl)
+        echo "Running via curl... Installing $SCRIPT_NAME."
+        install_script
+        generate_autocomplete
+        exit 0
+    fi
+}
 
-# Resto del script
+# Check if the script is being run via curl or by hand
+detect_run_mode "$1"
+
+# Main logic for enabling a site
 if [ -z "$1" ]; then
     echo "Please choose a site."
     exit 1
