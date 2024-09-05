@@ -1,18 +1,36 @@
 #!/usr/bin/env bash
 
 if [ $EUID -ne 0 ]; then
-    echo "You must be root: \"sudo ngxen\""
+    echo "You must be root: \"sudo ngxensite\""
     exit 1
 fi
 
-# -z str: Returns True if the length of str is equal to zero.
+# Función para autocompletado
+generate_autocomplete() {
+    cat <<EOF >/etc/bash_completion.d/ngxensite
+_ngen_autocomplete() {
+    local cur=\${COMP_WORDS[COMP_CWORD]}
+    COMPREPLY=(\$(compgen -W "\$(ls /etc/nginx/sites-available)" -- \${cur}))
+    return 0
+}
+complete -F _ngen_autocomplete ngxensite
+EOF
+    echo "Autocomplete script for ngxensite has been generated and installed."
+    source /etc/bash_completion.d/ngxensite
+    exit 0
+}
+
+# Verificar si se pasa la opción --autocomplete
+if [ "$1" == "--autocomplete" ]; then
+    generate_autocomplete
+fi
+
+# Resto del script
 if [ -z "$1" ]; then
     echo "Please choose a site."
     exit 1
 else
     echo "Enabling site $1..."
-    # -h filename: True if file exists and is a symbolic link.
-    # -f filename: Returns True if file, filename is an ordinary file.
     if [ -h "/etc/nginx/sites-enabled/$1" ] || [ -f "/etc/nginx/sites-enabled/$1" ]; then
         echo "$1 is already enabled."
         exit 1
