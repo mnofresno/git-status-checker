@@ -2,50 +2,26 @@
 
 SCRIPT_NAME="ngxensite"
 INSTALL_PATH="/usr/share/bin/$SCRIPT_NAME"
+REMOTE_URL="https://raw.githubusercontent.com/mnofresno/git-status-checker/master/bin/ngx/ngxensite"
 
-if [ $EUID -ne 0 ]; then
-    echo "You must be root: \"sudo $SCRIPT_NAME\""
-    exit 1
-fi
+source ./ngx_common.sh
 
-install_script() {
-    if [ ! -f "$INSTALL_PATH" ]; then
-        echo "Installing $SCRIPT_NAME to $INSTALL_PATH..."
-        curl -s https://raw.githubusercontent.com/mnofresno/git-status-checker/master/bin/ngx/ngxensite -o $INSTALL_PATH
-        chmod +x $INSTALL_PATH
-        echo "Installation complete."
-    else
-        echo "$SCRIPT_NAME is already installed in $INSTALL_PATH."
-    fi
-}
-
-generate_autocomplete() {
-    cat <<EOF >/etc/bash_completion.d/$SCRIPT_NAME
-_ngen_autocomplete() {
-    local cur=\${COMP_WORDS[COMP_CWORD]}
-    COMPREPLY=(\$(compgen -W "\$(ls /etc/nginx/sites-available)" -- \${cur}))
-    return 0
-}
-complete -F _ngen_autocomplete $SCRIPT_NAME
-EOF
-    echo "Autocomplete script for $SCRIPT_NAME has been generated and installed."
-    source /etc/bash_completion.d/$SCRIPT_NAME
-}
+check_root $SCRIPT_NAME
 
 detect_run_mode() {
     if [ -t 0 ]; then
-        echo "Running manually..."
         if [ "$1" == "--install" ]; then
-            install_script
-            generate_autocomplete
-            echo "Installation and autocompletion setup complete. You can now use $SCRIPT_NAME with autocompletion."
+            install_script "$SCRIPT_NAME" "$INSTALL_PATH" "$REMOTE_URL"
+            generate_autocomplete "$SCRIPT_NAME" "/etc/nginx/sites-available"
+            exit 0
+        elif [ "$1" == "--upgrade" ]; then
+            upgrade_script "$SCRIPT_NAME" "$INSTALL_PATH" "$REMOTE_URL"
+            generate_autocomplete "$SCRIPT_NAME" "/etc/nginx/sites-available"
             exit 0
         fi
     else
-        # Script is being piped (via curl)
-        echo "Running via curl... Installing $SCRIPT_NAME."
-        install_script
-        generate_autocomplete
+        install_script "$SCRIPT_NAME" "$INSTALL_PATH" "$REMOTE_URL"
+        generate_autocomplete "$SCRIPT_NAME" "/etc/nginx/sites-available"
         exit 0
     fi
 }
@@ -56,7 +32,6 @@ if [ -z "$1" ]; then
     echo "Please choose a site."
     exit 1
 else
-    echo "Enabling site $1..."
     if [ -h "/etc/nginx/sites-enabled/$1" ] || [ -f "/etc/nginx/sites-enabled/$1" ]; then
         echo "$1 is already enabled."
         exit 1
@@ -72,6 +47,4 @@ else
     fi
 fi
 
-echo "Reloading NGINX config..."
 service nginx reload
-echo "NGINX config reloaded!"
