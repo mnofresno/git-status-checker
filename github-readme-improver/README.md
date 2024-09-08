@@ -10,8 +10,11 @@ This script is a Bash tool designed to check and improve the quality of `README.
 - **Supports Private Repositories**: Optionally include private repositories in the check.
 - **Filter Repositories**: Filter repositories by type, such as "own" (owned by user) or "forks" (forked repositories).
 - **Configurable Context for Improvements**: Set the maximum size for files to be included as context when generating an improved `README.md`.
+- **Double-Check Mode**: Uses OpenAI to prioritize which files to include as context based on repository structure, ensuring a better README quality.
+- **Always Includes README.md**: Prioritizes including the existing `README.md` if it is within the context size limit; otherwise, it aborts to avoid degrading the quality.
 - **Automated Push to GitHub**: Automatically commits and offers to push changes to GitHub after improving a `README.md`.
 - **Handles Errors Gracefully**: Provides clear error messages for missing credentials, API issues, or missing `README.md` files.
+- **Interactive Author and Commit Message Configuration**: Prompts the user to input or confirm the commit author and commit message details interactively.
 - **Bash Autocompletion**: Automatically installs bash autocompletion for ease of use.
 
 ## Requirements
@@ -90,6 +93,7 @@ check-github-readmes
 - `-f, --filter <TYPE>`: Filter repositories by type: `own` (owned by user) or `forks` (forked repositories).
 - `--improve <REPO_NAME>`: Improve the `README.md` for a specific repository using OpenAI.
 - `--context-max-bytes <SIZE>`: Set the maximum size for files to be included as context (default: 1000 bytes).
+- `--double-check`: Enables double-check mode, where OpenAI prioritizes which files to include as context for the best possible `README.md` improvement.
 - `-h, --help`: Show the help message and usage instructions.
 
 ### Example Output
@@ -109,16 +113,17 @@ Done.
 To improve all repositories with `README.md` files that do not meet the size requirement, you can use the following combined command:
 
 ```bash
-./check-github-readmes.sh | grep "Repository '" | awk -F"'" '{print $2}' | while read repo; do ./check-github-readmes.sh --improve "$repo"; done
+check-github-readmes | grep "Repository '" | awk -F"'" '{print $2}' | while read repo; do check-github-readmes --improve "$repo"; done
 ```
 
-This command will automatically attempt to improve the `README.md` files of all repositories with insufficient documentation, as listed by the `check-github-readmes.sh` script.
+This command will automatically attempt to improve the `README.md` files of all repositories with insufficient documentation, as listed by the `check-github-readmes` script.
 
 ### Error Handling
 
 - **Invalid GitHub Token**: If the provided GitHub token is invalid, the script will display an error message and exit.
 - **Invalid OpenAI API Key**: If the provided OpenAI API key is invalid, the script will display an error message and exit.
 - **No README.md Found**: If a repository does not have a `README.md` file, the script will display a message indicating this.
+- **Context File Size Exceeded**: If the `README.md` or other important files exceed the context size limit, the script will display a warning and abort to avoid quality degradation.
 - **Network or API Issues**: The script checks for potential API issues and provides appropriate feedback.
 
 ## Contributing
