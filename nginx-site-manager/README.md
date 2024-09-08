@@ -11,7 +11,7 @@ You can install the `ngxensite` and `ngxdissite` scripts directly from this repo
 To install `ngxensite` directly from the repository, run:
 
 ```bash
-sudo curl -s https://raw.githubusercontent.com/mnofresno/git-status-checker/master/bin/ngx/ngxensite | sudo bash -s -- --install
+sudo curl -s https://raw.githubusercontent.com/mnofresno/scripting-tools/master/nginx-site-manager/ngxensite | sudo bash -s -- --install
 ```
 
 ### Install `ngxdissite`
@@ -19,7 +19,7 @@ sudo curl -s https://raw.githubusercontent.com/mnofresno/git-status-checker/mast
 To install `ngxdissite` directly from the repository, run:
 
 ```bash
-sudo curl -s https://raw.githubusercontent.com/mnofresno/git-status-checker/master/bin/ngx/ngxdissite | sudo bash -s -- --install
+sudo curl -s https://raw.githubusercontent.com/mnofresno/scripting-tools/master/nginx-site-manager/ngxdissite | sudo bash -s -- --install
 ```
 
 ## Upgrading the Scripts
@@ -29,13 +29,13 @@ To upgrade `ngxensite` or `ngxdissite` to the latest version available in the re
 ### Upgrade `ngxensite`
 
 ```bash
-sudo curl -s https://raw.githubusercontent.com/mnofresno/git-status-checker/master/bin/ngx/ngxensite | sudo bash -s -- --upgrade
+sudo curl -s https://raw.githubusercontent.com/mnofresno/scripting-tools/master/nginx-site-manager/ngxensite | sudo bash -s -- --upgrade
 ```
 
 ### Upgrade `ngxdissite`
 
 ```bash
-sudo curl -s https://raw.githubusercontent.com/mnofresno/git-status-checker/master/bin/ngx/ngxdissite | sudo bash -s -- --upgrade
+sudo curl -s https://raw.githubusercontent.com/mnofresno/scripting-tools/master/nginx-site-manager/ngxdissite | sudo bash -s -- --upgrade
 ```
 
 These commands will download the latest version of the script from the repository if the remote version is different from the installed one, ensuring you always have the most recent updates.

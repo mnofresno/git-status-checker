@@ -26,7 +26,7 @@ This script is a simple Bash tool that checks the size of the `README.md` files 
 You can download the script directly from this repository using `curl`:
 
 ```bash
-sudo curl -s https://raw.githubusercontent.com/mnofresno/git-status-checker/master/bin/check-github-readmes.sh -o /usr/local/bin/check-github-readmes && sudo chmod +x /usr/local/bin/check-github-readmes
+sudo curl -s https://raw.githubusercontent.com/mnofresno/scripting-tools/master/github-readme-improver/check-github-readmes.sh -o /usr/local/bin/check-github-readmes && sudo chmod +x /usr/local/bin/check-github-readmes
 ```
 
 ## Configuration

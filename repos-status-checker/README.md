@@ -20,7 +20,7 @@ You can install the `check_git_status` script directly from this repository usin
 To install `check_git_status` directly from the repository, run:
 
 ```bash
-sudo curl -s https://raw.githubusercontent.com/mnofresno/git-status-checker/master/bin/check_git_status.sh -o /usr/local/bin/check_git_status && sudo chmod +x /usr/local/bin/check_git_status
+sudo curl -s https://raw.githubusercontent.com/mnofresno/scripting-tools/master/repos-status-checker/check_git_status -o /usr/local/bin/check_git_status && sudo chmod +x /usr/local/bin/check_git_status
 ```
 
 This command will download the script and install it in `/usr/local/bin/check_git_status`, making it available system-wide. The first time you run the script, it will automatically install the autocompletion if it is not already installed.
