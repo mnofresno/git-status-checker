@@ -1,5 +1,19 @@
 #!/bin/bash
 
+# Function to show help message
+show_help() {
+    echo "Usage: $0 [DIRECTORY] [OPTIONS]"
+    echo ""
+    echo "Options:"
+    echo "  -f [Dirty|Stagging|Clean]  Filter repositories by their status."
+    echo "  -h, --help                 Show this help message and exit."
+    echo ""
+    echo "Examples:"
+    echo "  $0 /path/to/repos -f Dirty    Show only repos with Dirty status."
+    echo "  $0 /path/to/repos -f Clean    Show only repos with Clean status."
+    echo "  $0 /path/to/repos             Show all repos."
+}
+
 # Function to check the git status
 check_git_status() {
     local dir="$1"
@@ -21,7 +35,13 @@ check_git_status() {
 get_last_commit_author_email() {
     local dir="$1"
     cd "$dir" || return
-    git log -1 --pretty=format:'%ae'
+
+    # Verifica si hay commits en el repositorio
+    if git log -1 &>/dev/null; then
+        git log -1 --pretty=format:'%ae'
+    else
+        echo "No commits yet"
+    fi
 }
 
 # Function to print the table header
@@ -43,12 +63,46 @@ print_footer() {
     echo "+----------------------------+----------------+-----------+----------------------------+"
 }
 
+# Function to install autocompletion script
+install_autocompletion() {
+    local autocomplete_script="/etc/bash_completion.d/check_git_status_autocomplete.sh"
+    
+    if [ ! -f "$autocomplete_script" ]; then
+        echo "Installing autocompletion for check_git_status..."
+        cat <<EOF | sudo tee "$autocomplete_script" > /dev/null
+#!/bin/bash
+
+_check_git_status_autocomplete() {
+    local cur opts
+    COMPREPLY=()
+    cur="\${COMP_WORDS[COMP_CWORD]}"
+    opts="-f -h --help Dirty Stagging Clean"
+
+    if [[ \${cur} == -* ]]; then
+        COMPREPLY=( \$(compgen -W "\${opts}" -- \${cur}) )
+    elif [[ \${COMP_CWORD} -gt 1 && "\${COMP_WORDS[COMP_CWORD-1]}" == "-f" ]]; then
+        COMPREPLY=( \$(compgen -W "Dirty Stagging Clean" -- \${cur}) )
+    fi
+
+    return 0
+}
+
+complete -F _check_git_status_autocomplete check_git_status
+EOF
+        echo "Autocompletion installed. Reload your shell or run 'source ~/.bashrc' to enable it."
+    fi
+}
+
 # Main function to find git repos and their statuses
 main() {
     local target_dir="$1"
+    local filter="$2"
     local clean_count=0
     local dirty_count=0
     local stagging_count=0
+
+    # Install autocompletion if not already installed
+    install_autocompletion
 
     if [[ -z "$target_dir" ]]; then
         echo "No directory specified. Using the current directory ('.') as the target."
@@ -82,7 +136,10 @@ main() {
                     ;;
             esac
 
-            print_row "${dir%/}" "$status" "$changes" "$author_email"
+            # Filter based on the provided filter option
+            if [[ -z "$filter" || "$filter" == "$status" ]]; then
+                print_row "${dir%/}" "$status" "$changes" "$author_email"
+            fi
         fi
     done
     print_footer
@@ -98,5 +155,40 @@ main() {
     echo "+-----------+-------+"
 }
 
-# Run the main function with the specified directory
-main "$1"
+# Parse arguments for target directory and options
+while getopts ":f:h-:" opt; do
+  case ${opt} in
+    f )
+      filter="$OPTARG"
+      ;;
+    h )
+      show_help
+      exit 0
+      ;;
+    - )
+      case "${OPTARG}" in
+          help)
+            show_help
+            exit 0
+            ;;
+          *)
+            echo "Invalid option: --${OPTARG}" 1>&2
+            exit 1
+            ;;
+      esac
+      ;;
+    \? )
+      echo "Invalid option: -$OPTARG" 1>&2
+      exit 1
+      ;;
+    : )
+      echo "Invalid option: -$OPTARG requires an argument" 1>&2
+      exit 1
+      ;;
+  esac
+done
+
+shift $((OPTIND -1))
+
+# Run the main function with the specified directory and filter
+main "$1" "$filter"
