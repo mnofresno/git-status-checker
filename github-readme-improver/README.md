@@ -1,25 +1,31 @@
-# GitHub README Size Checker
+# GitHub README Quality Checker
 
-This script is a simple Bash tool that checks the size of the `README.md` files for all repositories associated with a GitHub account. It helps ensure that all repositories have sufficiently informative `README.md` files by verifying that they meet a minimum size requirement.
+This script is a Bash tool designed to check and improve the quality of `README.md` files for all repositories associated with a GitHub account. It helps ensure that all repositories have sufficiently informative `README.md` files by verifying that they meet a minimum size requirement and can automatically generate better `README.md` files using OpenAI.
 
 ## Features
 
 - **Check README Size**: Automatically checks the size of `README.md` files for all repositories associated with a GitHub user account.
+- **Improve README Content**: Uses OpenAI's API to automatically generate a more informative and comprehensive `README.md` file for a repository.
 - **Configurable Minimum Size**: Set a minimum size requirement for `README.md` files to help ensure comprehensive documentation.
 - **Supports Private Repositories**: Optionally include private repositories in the check.
-- **Uses GitHub API**: Leverages the GitHub API to fetch repository information and `README.md` sizes securely.
+- **Filter Repositories**: Filter repositories by type, such as "own" (owned by user) or "forks" (forked repositories).
+- **Configurable Context for Improvements**: Set the maximum size for files to be included as context when generating an improved `README.md`.
+- **Automated Push to GitHub**: Automatically commits and offers to push changes to GitHub after improving a `README.md`.
 - **Handles Errors Gracefully**: Provides clear error messages for missing credentials, API issues, or missing `README.md` files.
+- **Bash Autocompletion**: Automatically installs bash autocompletion for ease of use.
 
 ## Requirements
 
 - **Bash**: A Unix-like shell.
 - **GitHub Personal Access Token**: Required to access the GitHub API.
+- **OpenAI API Key**: Required to access OpenAI's API for improving `README.md` files.
 - **jq**: A lightweight and flexible command-line JSON processor. Install it with:
   ```bash
   sudo apt-get install jq  # On Debian/Ubuntu
   sudo yum install jq      # On CentOS/RHEL
   brew install jq          # On macOS
   ```
+- **git**: Required for cloning repositories and making changes.
 
 ## Installation
 
@@ -45,7 +51,13 @@ sudo curl -s https://raw.githubusercontent.com/mnofresno/scripting-tools/master/
     export GITHUB_USERNAME="your_github_username"
     ```
 
-3. **Optional Configuration**:
+3. **OpenAI API Key**: The script also requires an OpenAI API key to generate improved `README.md` files. Set up the key in an environment variable:
+
+    ```bash
+    export OPENAI_API_KEY="your_openai_api_key"
+    ```
+
+4. **Optional Configuration**:
    - **Minimum README Size**: Set the minimum size for `README.md` files in bytes (default is 200 bytes):
 
       ```bash
@@ -56,6 +68,12 @@ sudo curl -s https://raw.githubusercontent.com/mnofresno/scripting-tools/master/
 
       ```bash
       export CHECK_PRIVATE_REPOS=true
+      ```
+   
+   - **Context Max Size**: Set the maximum size for files to be included as context when generating an improved `README.md` (default is 1000 bytes):
+
+      ```bash
+      export CONTEXT_MAX_BYTES=1000
       ```
 
 ## Usage
@@ -68,7 +86,11 @@ check-github-readmes
 
 ### Options
 
-- The script uses environment variables for configuration. Make sure to set the necessary variables as described in the **Configuration** section.
+- `--min-bytes <SIZE>`: Set the minimum size for `README.md` files in bytes (default: 200).
+- `-f, --filter <TYPE>`: Filter repositories by type: `own` (owned by user) or `forks` (forked repositories).
+- `--improve <REPO_NAME>`: Improve the `README.md` for a specific repository using OpenAI.
+- `--context-max-bytes <SIZE>`: Set the maximum size for files to be included as context (default: 1000 bytes).
+- `-h, --help`: Show the help message and usage instructions.
 
 ### Example Output
 
@@ -82,9 +104,20 @@ Repository 'secret-repo' does not have a README.md file.
 Done.
 ```
 
-## Error Handling
+### Improving All Repositories
+
+To improve all repositories with `README.md` files that do not meet the size requirement, you can use the following combined command:
+
+```bash
+./check-github-readmes.sh | grep "Repository '" | awk -F"'" '{print $2}' | while read repo; do ./check-github-readmes.sh --improve "$repo"; done
+```
+
+This command will automatically attempt to improve the `README.md` files of all repositories with insufficient documentation, as listed by the `check-github-readmes.sh` script.
+
+### Error Handling
 
 - **Invalid GitHub Token**: If the provided GitHub token is invalid, the script will display an error message and exit.
+- **Invalid OpenAI API Key**: If the provided OpenAI API key is invalid, the script will display an error message and exit.
 - **No README.md Found**: If a repository does not have a `README.md` file, the script will display a message indicating this.
 - **Network or API Issues**: The script checks for potential API issues and provides appropriate feedback.
 

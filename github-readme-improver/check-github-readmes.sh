@@ -3,9 +3,11 @@
 # Default configuration
 GITHUB_USERNAME=${GITHUB_USERNAME:-"your_github_username"}
 GITHUB_TOKEN=${GITHUB_TOKEN:-"your_github_token"}
+OPENAI_API_KEY=${OPENAI_API_KEY:-"your_openai_api_key"}
 MIN_README_SIZE=200 # Default minimum size in bytes
 CHECK_PRIVATE_REPOS=${CHECK_PRIVATE_REPOS:-false}
 API_URL="https://api.github.com"
+CONTEXT_MAX_BYTES=1000 # Default max size for file context in bytes
 
 # Configuration path
 CONFIG_DIR="$HOME/.config/scripting-tools"
@@ -28,8 +30,10 @@ load_config() {
             cat <<EOF > "$CONFIG_FILE"
 GITHUB_USERNAME="your_github_username"
 GITHUB_TOKEN="your_github_token"
+OPENAI_API_KEY="your_openai_api_key"
 MIN_README_SIZE=200
 CHECK_PRIVATE_REPOS=false
+CONTEXT_MAX_BYTES=1000
 EOF
             echo "Default config file created at $CONFIG_FILE."
         fi
@@ -42,19 +46,30 @@ EOF
 # Load the configuration
 load_config
 
+# Check if required commands are available
+command -v jq >/dev/null 2>&1 || { echo "jq is required but not installed. Aborting."; exit 1; }
+command -v git >/dev/null 2>&1 || { echo "git is required but not installed. Aborting."; exit 1; }
+
 # Function to show help
 show_help() {
     echo "Usage: $0 [OPTIONS]"
     echo ""
     echo "Options:"
-    echo "  --min-bytes <SIZE>       Set the minimum size for README.md files in bytes (default: 200)"
-    echo "  -f, --filter <TYPE>      Filter repositories by type: 'own' (owned by user) or 'forks' (forked repositories)"
-    echo "  -h, --help               Show this help message and exit"
+    echo "  --min-bytes <SIZE>         Set the minimum size for README.md files in bytes (default: 200)"
+    echo "  -f, --filter <TYPE>        Filter repositories by type: 'own' (owned by user) or 'forks' (forked repositories)"
+    echo "  --improve <REPO_NAME>      Improve the README.md for a specific repository"
+    echo "  --context-max-bytes <SIZE> Set the maximum size for files to be included as context (default: 1000 bytes)"
+    echo "  -h, --help                 Show this help message and exit"
 }
 
-# Check if GitHub token is set
+# Check if GitHub token and OpenAI API key are set
 if [[ -z "$GITHUB_TOKEN" || "$GITHUB_TOKEN" == "your_github_token" ]]; then
     echo "Error: You must set the GITHUB_TOKEN environment variable with a valid GitHub access token in $CONFIG_FILE."
+    exit 1
+fi
+
+if [[ -z "$OPENAI_API_KEY" || "$OPENAI_API_KEY" == "your_openai_api_key" ]]; then
+    echo "Error: You must set the OPENAI_API_KEY environment variable with a valid OpenAI API key in $CONFIG_FILE."
     exit 1
 fi
 
@@ -71,10 +86,125 @@ check_readme_size() {
     fi
 }
 
+# Function to improve the README.md using OpenAI Chat API
+improve_readme() {
+    local repo_name="$1"
+
+    # Clone the repository to a temporary directory
+    temp_dir=$(mktemp -d)
+    git clone "git@github.com:$GITHUB_USERNAME/$repo_name.git" "$temp_dir" || { echo "Error: Failed to clone repository. Aborting."; rm -rf "$temp_dir"; exit 1; }
+
+    # Fetch repository description from GitHub
+    repo_description=$(curl -s -H "Authorization: token $GITHUB_TOKEN" "$API_URL/repos/$GITHUB_USERNAME/$repo_name" | jq -r '.description // "No description available."')
+
+    # Gather context: List of files and contents of small files
+    context="Repository Description: $repo_description\n\nFile List and Contents:\n"
+    while IFS= read -r file; do
+        file_size=$(stat -c%s "$temp_dir/$file")
+        if [[ "$file_size" -le "$CONTEXT_MAX_BYTES" ]]; then
+            context+="\nFile: $file\nContents:\n$(cat "$temp_dir/$file")\n"
+        else
+            context+="\nFile: $file (Size: $file_size bytes, skipped due to size limit)\n"
+        fi
+    done < <(cd "$temp_dir" && git ls-files)
+
+    # Build the JSON payload using jq to ensure it is correctly formatted
+    json_payload=$(jq -n --arg model "gpt-4o-mini" \
+                         --arg content "Improve the README.md for the following repository based on the context provided:\n\n$context" \
+                         '{
+                           model: $model,
+                           messages: [{"role": "user", "content": $content}],
+                           max_tokens: 3000,
+                           temperature: 0.5
+                         }')
+
+    echo "JSON payload to be sent to OpenAI API:"
+    echo "$json_payload" | jq  # Print formatted JSON for verification
+
+    # Use OpenAI API to generate improved README
+    response=$(curl -s -X POST https://api.openai.com/v1/chat/completions \
+        -H "Content-Type: application/json" \
+        -H "Authorization: Bearer $OPENAI_API_KEY" \
+        -d "$json_payload")
+
+    if [[ $? -ne 0 ]] || [[ -z "$response" ]]; then
+        echo "Error: Failed to fetch improved README from OpenAI API. Aborting."
+        rm -rf "$temp_dir"
+        exit 1
+    fi
+
+    # Check for errors in the OpenAI API response
+    error_message=$(echo "$response" | jq -r '.error.message // empty')
+    if [[ -n "$error_message" ]]; then
+        echo "OpenAI API Error: $error_message"
+        rm -rf "$temp_dir"
+        exit 1
+    fi
+
+    improved_readme=$(echo "$response" | jq -r '.choices[0].message.content // empty')
+    if [[ -z "$improved_readme" ]]; then
+        echo "Error: No valid response from OpenAI API. Aborting."
+        rm -rf "$temp_dir"
+        exit 1
+    fi
+
+    # Get the author from the last commit or from global Git configuration
+    cd "$temp_dir"
+    commit_author_name=$(git log -1 --pretty=format:'%an' 2>/dev/null || git config --global user.name)
+    commit_author_email=$(git log -1 --pretty=format:'%ae' 2>/dev/null || git config --global user.email)
+
+    # Prompt user for confirmation and allow overriding
+    read -p "Enter the commit author name ($commit_author_name): " input_author_name
+    commit_author_name=${input_author_name:-$commit_author_name}
+
+    read -p "Enter the commit author email ($commit_author_email): " input_author_email
+    commit_author_email=${input_author_email:-$commit_author_email}
+
+    if [[ -z "$commit_author_name" || -z "$commit_author_email" ]]; then
+        echo "Error: Author name and email must be provided. Aborting."
+        rm -rf "$temp_dir"
+        exit 1
+    fi
+
+    # Prompt user for confirmation
+    echo "Generated README.md content:"
+    echo "$improved_readme"
+    # Prompt user for confirmation with 'Y' as the default
+    read -p "Do you want to upgrade the README.md? (Y/n) " confirm
+    confirm=${confirm:-Y}  # Set default to 'Y' if empty
+
+    if [[ "$confirm" =~ ^[Yy]$ ]]; then
+        # Proceed with upgrading the README.md
+        echo "$improved_readme" > "$temp_dir/README.md"
+        git config user.name "$commit_author_name"
+        git config user.email "$commit_author_email"
+        git add README.md
+        git commit -m "fix(doc): Auto improve README.md"
+        echo "README.md improved and committed."
+
+        # Ask user if they want to push the changes
+        read -p "Do you want to push the changes to the remote repository? (Y/n) " push_confirm
+        push_confirm=${push_confirm:-Y}  # Set default to 'Y' if empty
+
+        if [[ "$push_confirm" =~ ^[Yy]$ ]]; then
+            git push
+            echo "Changes have been pushed to the remote repository."
+        else
+            echo "Changes have not been pushed. You can push manually by running 'git push' in the repository folder."
+        fi
+    else
+        echo "README.md not upgraded."
+    fi
+
+
+    # Clean up
+    rm -rf "$temp_dir"
+}
+
 # Fetch the list of repositories
 get_repositories() {
     local visibility="public"
-    local filter_type="$1"
+    local filter_type="${1:-own}"  # Default to 'own' if no filter is provided
     
     if [[ "$CHECK_PRIVATE_REPOS" == "true" ]]; then
         visibility="all"
@@ -112,7 +242,7 @@ _check_github_readmes_autocomplete() {
     local cur opts
     COMPREPLY=()
     cur="\${COMP_WORDS[COMP_CWORD]}"
-    opts="--min-bytes -f --filter -h --help own forks"
+    opts="--min-bytes -f --filter -h --help own forks --improve --context-max-bytes"
 
     if [[ \${cur} == -* ]]; then
         COMPREPLY=( \$(compgen -W "\${opts}" -- \${cur}) )
@@ -131,6 +261,7 @@ EOF
 
 # Main
 filter_type=""
+improve_repo=""
 while [[ "$#" -gt 0 ]]; do
     case $1 in
         --min-bytes)
@@ -140,6 +271,14 @@ while [[ "$#" -gt 0 ]]; do
         -f|--filter)
             shift
             filter_type="$1"
+            ;;
+        --improve)
+            shift
+            improve_repo="$1"
+            ;;
+        --context-max-bytes)
+            shift
+            CONTEXT_MAX_BYTES="$1"
             ;;
         -h|--help)
             show_help
@@ -163,6 +302,12 @@ fi
 
 # Install autocompletion if needed
 install_autocompletion
+
+# Improve README if requested
+if [[ -n "$improve_repo" ]]; then
+    improve_readme "$improve_repo"
+    exit 0
+fi
 
 echo "Checking repositories for README.md size..."
 
