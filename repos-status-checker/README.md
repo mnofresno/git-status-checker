@@ -1,60 +1,62 @@
 # Git Repository Status Checker
 
-This project provides a simple Bash script to check the status of multiple Git repositories within a specified directory. The script displays the status of each repository in a clean, easy-to-read table format and provides a summary of the statuses at the end. It also includes features for filtering, help options, and autocompletion.
+`check_git_status` is a versatile Bash script designed to provide a comprehensive overview of the status of multiple Git repositories within a specified directory. It presents the status of each repository in a neatly formatted table and provides a summary of repository states at the end. The script supports various features such as filtering, help options, and autocompletion to enhance user experience.
 
 ## Features
 
-- **Checks Git Status**: The script inspects the status of each Git repository in a target directory and classifies them as `Clean`, `Dirty`, or `Stagging`.
-- **Filtering**: You can filter the output to show only repositories in a specific status (`Clean`, `Dirty`, or `Stagging`) using the `-f` option.
-- **Help Option**: Provides a `-h` or `--help` option to display usage instructions.
-- **Tabular Output**: The script outputs the results in a formatted table for easy readability.
-- **Summary**: A summary section at the end shows the total count of repositories in each status.
-- **Autocompletion**: Bash autocompletion is supported for the script's options, making it easier to use. The autocompletion is installed automatically the first time the script is run.
+- **Git Status Overview**: The script inspects each Git repository within a target directory and categorizes them as `Clean`, `Dirty`, or `Stagging` based on their current state.
+- **Flexible Filtering**: Use the `-f` option to filter repositories by status (`Clean`, `Dirty`, or `Stagging`), showing only the repositories of interest.
+- **Detailed Help Option**: Provides a `-h` or `--help` option to display detailed usage instructions, examples, and available options.
+- **Formatted Tabular Output**: Outputs results in a clear, readable table format, making it easy to see the status of multiple repositories at a glance.
+- **Status Summary**: At the end of the output, the script provides a summary count of repositories by their status.
+- **Bash Autocompletion**: Supports autocompletion for options and commands, simplifying usage. Autocompletion is installed automatically when the script is run for the first time.
 
 ## Installation
 
-You can install the `check_git_status` script directly from this repository using `curl`. **Ensure you run these commands with `sudo` to allow them to install properly:**
+To install the `check_git_status` script, follow these steps. Make sure to run these commands with `sudo` to ensure proper installation:
 
-### Install `check_git_status`
+### Step 1: Install `check_git_status`
 
-To install `check_git_status` directly from the repository, run:
+Run the following command to download and install the script directly from the repository:
 
 ```bash
 sudo curl -s https://raw.githubusercontent.com/mnofresno/scripting-tools/master/repos-status-checker/check_git_status -o /usr/local/bin/check_git_status && sudo chmod +x /usr/local/bin/check_git_status
 ```
 
-This command will download the script and install it in `/usr/local/bin/check_git_status`, making it available system-wide. The first time you run the script, it will automatically install the autocompletion if it is not already installed.
+This command will download the script and place it in `/usr/local/bin/check_git_status`, making it available system-wide. The first time you run the script, it will also install the autocompletion if it is not already installed.
 
 ## Usage
 
-1. After installation, you can use the script by specifying the target directory:
+After installation, you can use the script to check the status of Git repositories in a specific directory. By default, it will check the current directory if no target directory is provided.
 
-    ```bash
-    check_git_status /path/to/target/directory
-    ```
+### Basic Command
 
-    If no directory is specified, the script will use the current directory (`.`) as the target.
+```bash
+check_git_status /path/to/target/directory
+```
+
+If no directory is specified, the script will default to the current directory (`.`).
 
 ### Options
 
-- `-f [Dirty|Stagging|Clean]`: Filter the repositories by their status. For example, `-f Dirty` will display only repositories with unstaged changes.
-- `-h`, `--help`: Show the help message and usage instructions.
+- `-f [Dirty|Stagging|Clean]`: Filter the output to display only repositories with the specified status.
+- `-h`, `--help`: Display help information, usage instructions, and examples.
 
 ### Examples
 
-1. **Check all repositories in a directory:**
+1. **Check the status of all repositories in a directory:**
 
     ```bash
     check_git_status /path/to/target/directory
     ```
 
-2. **Filter to show only Dirty repositories:**
+2. **Show only repositories with unstaged changes (Dirty):**
 
     ```bash
     check_git_status /path/to/target/directory -f Dirty
     ```
 
-3. **Show help message:**
+3. **Display help message:**
 
     ```bash
     check_git_status -h
@@ -62,31 +64,33 @@ This command will download the script and install it in `/usr/local/bin/check_gi
 
 ## Autocompletion
 
-The script automatically installs autocompletion the first time it is run. This enables autocompletion for options such as `-f Dirty`, `-f Stagging`, `-f Clean`, `-h`, and `--help`.
+The script supports Bash autocompletion for options such as `-f Dirty`, `-f Stagging`, `-f Clean`, `-h`, and `--help`. This makes it easier to use by providing suggestions as you type.
 
-If you need to manually reload the autocompletion scripts after the installation, you can do so with:
+### Manually Reload Autocompletion
+
+If you need to manually reload the autocompletion scripts after the installation, use the following command:
 
 ```bash
 source /etc/bash_completion.d/check_git_status_autocomplete.sh
 ```
 
-## Output
+## Output Format
 
 The script outputs a table with the following columns:
 
 - **Repository**: The name of the Git repository.
 - **Status**: The status of the repository:
-  - `Clean`: No changes.
-  - `Dirty`: Unstaged changes detected.
-  - `Stagging`: Changes staged for commit.
+  - `Clean`: No changes detected.
+  - `Dirty`: Unstaged changes are present.
+  - `Stagging`: Changes are staged for commit.
 - **Changes #**: The number of changes detected in the repository.
-- **Last Commit Author Email**: The email of the author of the last commit (if available).
+- **Last Commit Author Email**: The email of the author of the last commit, if available.
 
-At the end, a summary of the number of repositories in each status is displayed.
+A summary table is displayed at the end, providing a quick overview of the number of repositories in each status.
 
-## Example
+## Example Output
 
-Here's an example of the output:
+Here’s an example of what the output looks like:
 
 ```
 +----------------------------+----------------+-----------+----------------------------+
@@ -109,17 +113,17 @@ Summary:
 
 ## Requirements
 
-- Bash shell
-- Git installed on your system
+- **Bash Shell**: Ensure you have a Bash-compatible shell.
+- **Git**: Git must be installed on your system for the script to function.
 
 ## License
 
-This project is open source and available under the [MIT License](LICENSE).
+This project is licensed under the [MIT License](LICENSE). You are free to use, modify, and distribute this software.
 
 ## Contributing
 
-Contributions are welcome! If you have ideas for improvements or new features, feel free to fork the repository and submit a pull request.
+Contributions are always welcome! If you have ideas for improvements or new features, feel free to fork the repository, create a branch, and submit a pull request.
 
 ## Contact
 
-For any questions or feedback, feel free to open an issue in this repository.
+If you have any questions or need further assistance, please open an issue on this repository.

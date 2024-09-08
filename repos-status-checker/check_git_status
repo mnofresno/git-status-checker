@@ -1,17 +1,33 @@
 #!/bin/bash
 
+# Define the target installation path
+INSTALL_PATH="/usr/local/bin/check_git_status"
+
+# Self-installation function
+self_install() {
+    # Check if the script is already in the target path
+    if [ "$(realpath "$0")" != "$INSTALL_PATH" ]; then
+        echo "Installing the script to $INSTALL_PATH..."
+        sudo cp "$0" "$INSTALL_PATH"
+        sudo chmod +x "$INSTALL_PATH"
+        echo "Script installed successfully. Please run 'check_git_status' to use the script."
+        install_autocompletion
+        exit 0
+    fi
+}
+
 # Function to show help message
 show_help() {
-    echo "Usage: $0 [DIRECTORY] [OPTIONS]"
+    echo "Usage: check_git_status [DIRECTORY] [OPTIONS]"
     echo ""
     echo "Options:"
-    echo "  -f [Dirty|Stagging|Clean]  Filter repositories by their status."
+    echo "  -f [Dirty|Stagging|Clean]  Filter repositories by their status. Default is Dirty."
     echo "  -h, --help                 Show this help message and exit."
     echo ""
     echo "Examples:"
-    echo "  $0 /path/to/repos -f Dirty    Show only repos with Dirty status."
-    echo "  $0 /path/to/repos -f Clean    Show only repos with Clean status."
-    echo "  $0 /path/to/repos             Show all repos."
+    echo "  check_git_status /path/to/repos -f Dirty    Show only repos with Dirty status."
+    echo "  check_git_status /path/to/repos -f Clean    Show only repos with Clean status."
+    echo "  check_git_status /path/to/repos             Show repos with Dirty status by default."
 }
 
 # Function to check the git status
@@ -76,12 +92,14 @@ _check_git_status_autocomplete() {
     local cur opts
     COMPREPLY=()
     cur="\${COMP_WORDS[COMP_CWORD]}"
-    opts="-f -h --help Dirty Stagging Clean"
+    opts="-f -h --help"
 
-    if [[ \${cur} == -* ]]; then
-        COMPREPLY=( \$(compgen -W "\${opts}" -- \${cur}) )
-    elif [[ \${COMP_CWORD} -gt 1 && "\${COMP_WORDS[COMP_CWORD-1]}" == "-f" ]]; then
-        COMPREPLY=( \$(compgen -W "Dirty Stagging Clean" -- \${cur}) )
+    if [[ "\${cur}" == ./* || "\${cur}" == /* || "\${cur}" == ~* ]]; then
+        COMPREPLY=( \$(compgen -o dirnames -- "\${cur}") )
+    elif [[ "\${cur}" == -* ]]; then
+        COMPREPLY=( \$(compgen -W "\${opts}" -- "\${cur}") )
+    elif [[ "\${COMP_WORDS[COMP_CWORD-1]}" == "-f" ]]; then
+        COMPREPLY=( \$(compgen -W "Dirty Stagging Clean" -- "\${cur}") )
     fi
 
     return 0
@@ -96,7 +114,7 @@ EOF
 # Main function to find git repos and their statuses
 main() {
     local target_dir="$1"
-    local filter="$2"
+    local filter="${2:-Dirty}"  # Default filter is Dirty
     local clean_count=0
     local dirty_count=0
     local stagging_count=0
@@ -154,6 +172,9 @@ main() {
     printf "| Stagging  | %5d |\n" "$stagging_count"
     echo "+-----------+-------+"
 }
+
+# Install the script if it's not already installed
+self_install
 
 # Parse arguments for target directory and options
 while getopts ":f:h-:" opt; do
