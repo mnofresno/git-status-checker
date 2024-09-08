@@ -1,9 +1,9 @@
 #!/usr/bin/env bash
 
 SCRIPT_NAME="ngxensite"
-INSTALL_PATH="/usr/share/bin/$SCRIPT_NAME"
+INSTALL_PATH="/usr/local/bin/$SCRIPT_NAME"
 REMOTE_URL="https://raw.githubusercontent.com/mnofresno/git-status-checker/master/bin/ngx/ngxensite"
-COMMON_LIB_PATH="/usr/share/bin/ngx_common.sh"
+COMMON_LIB_PATH="/usr/local/lib/ngx_common.sh"
 COMMON_LIB_URL="https://raw.githubusercontent.com/mnofresno/git-status-checker/master/bin/ngx/ngx_common.sh"
 
 if [ ! -f "$COMMON_LIB_PATH" ]; then
