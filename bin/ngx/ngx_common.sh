@@ -65,3 +65,9 @@ EOF
     echo "Autocomplete script for $script_name has been generated and installed."
     source /etc/bash_completion.d/$script_name
 }
+
+reload_nginx() {
+    echo "Reloading NGINX config..."
+    service nginx reload
+    echo "NGINX config reloaded!"
+}
