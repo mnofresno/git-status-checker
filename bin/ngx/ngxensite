@@ -3,23 +3,35 @@
 SCRIPT_NAME="ngxensite"
 INSTALL_PATH="/usr/share/bin/$SCRIPT_NAME"
 REMOTE_URL="https://raw.githubusercontent.com/mnofresno/git-status-checker/master/bin/ngx/ngxensite"
+COMMON_LIB_PATH="/usr/share/bin/ngx_common.sh"
+COMMON_LIB_URL="https://raw.githubusercontent.com/mnofresno/git-status-checker/master/bin/ngx/ngx_common.sh"
 
-source ./ngx_common.sh
+if [ ! -f "$COMMON_LIB_PATH" ]; then
+    echo "Downloading ngx_common.sh..."
+    curl -s "$COMMON_LIB_URL" -o "$COMMON_LIB_PATH"
+    chmod +x "$COMMON_LIB_PATH"
+fi
+
+source "$COMMON_LIB_PATH"
 
 check_root $SCRIPT_NAME
 
 detect_run_mode() {
     if [ -t 0 ]; then
+        echo "Running manually..."
         if [ "$1" == "--install" ]; then
             install_script "$SCRIPT_NAME" "$INSTALL_PATH" "$REMOTE_URL"
             generate_autocomplete "$SCRIPT_NAME" "/etc/nginx/sites-available"
+            echo "Installation and autocompletion setup complete."
             exit 0
         elif [ "$1" == "--upgrade" ]; then
             upgrade_script "$SCRIPT_NAME" "$INSTALL_PATH" "$REMOTE_URL"
             generate_autocomplete "$SCRIPT_NAME" "/etc/nginx/sites-available"
+            echo "Upgrade and autocompletion setup complete."
             exit 0
         fi
     else
+        echo "Running via curl... Installing $SCRIPT_NAME."
         install_script "$SCRIPT_NAME" "$INSTALL_PATH" "$REMOTE_URL"
         generate_autocomplete "$SCRIPT_NAME" "/etc/nginx/sites-available"
         exit 0
@@ -32,6 +44,7 @@ if [ -z "$1" ]; then
     echo "Please choose a site."
     exit 1
 else
+    echo "Enabling site $1..."
     if [ -h "/etc/nginx/sites-enabled/$1" ] || [ -f "/etc/nginx/sites-enabled/$1" ]; then
         echo "$1 is already enabled."
         exit 1
@@ -42,9 +55,8 @@ else
         else
             ln -s /etc/nginx/sites-available/$1 /etc/nginx/sites-enabled/$1
             echo "Enabled $1"
+            reload_nginx
             exit 0
         fi
     fi
 fi
-
-service nginx reload
